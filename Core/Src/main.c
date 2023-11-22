@@ -21,7 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "cmsis_os2.h"
+#include "RTE_Components.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +43,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+__IO osThreadId_t app_main_ID;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,6 +58,19 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static const osThreadAttr_t ThreadAttr_app_main =
+	{
+		.name = "app_main",
+		.priority = (osPriority_t)osPriorityNormal,
+		.stack_size = 256};
+	
+void app_main(void *arg)
+{
+	while(1)
+	{
+		osDelay(10);
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -96,7 +110,12 @@ int main(void)
   MX_RTC_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+	osKernelInitialize();
+	app_main_ID = osThreadNew(app_main, NULL, &ThreadAttr_app_main);
+	while (osKernelGetState() != osKernelReady)
+	{
+	};
+	osKernelStart();
   /* USER CODE END 2 */
 
   /* Infinite loop */
