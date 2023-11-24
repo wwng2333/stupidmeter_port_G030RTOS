@@ -155,9 +155,7 @@ void USART2_IRQHandler(void)
 {
   if (LL_USART_IsActiveFlag_RXNE(USART2))
   {
-		UART2_SendString("uart recv!\r\n");
     uint8_t temp = LL_USART_ReceiveData8(USART2);
-		LL_USART_TransmitData8(USART2, temp);
     if (uart_state == RCV_HEAD && temp == HEAD && uart_rcv_count == 0)
     {
       uart_rcv_buf[uart_rcv_count] = temp;

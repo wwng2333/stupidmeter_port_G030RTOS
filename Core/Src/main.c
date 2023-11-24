@@ -85,14 +85,18 @@ static const osThreadAttr_t ThreadAttr_uart_transmit =
 			.priority = (osPriority_t)osPriorityNormal,
 			.stack_size = 512};
 		
+static const osEventFlagsAttr_t FlagsAttr_uart_event =
+    {
+        .name = "uart_rcv_evt"};
+			
 __NO_RETURN void uart_transmit_thread(void *arg)
 {
+	osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
   for (;;)
   {
     osEventFlagsWait(uart_event_flagID, UART_RCV_DONE_FLAG, osFlagsWaitAny, osWaitForever);
-		//SEGGER_RTT_printf(0, "uart recv!\r\n");
-		//UART2_SendString("uart recv!\r\n");
-		//SEGGER_RTT_printf(0, "%s", uart_rcv_buf);
+		SEGGER_RTT_printf(0, "uart recv!\r\n");
+		UART2_SendString("uart recv!\r\n");
 		memset(uart_rcv_buf, 0, SIZE(uart_rcv_buf));
 		uart_state = RCV_HEAD;
 		uart_rcv_count = 0;
@@ -103,7 +107,7 @@ __NO_RETURN void uart_transmit_thread(void *arg)
 
 void app_main(void *arg)
 {
-	osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
+	uart_event_flagID = osEventFlagsNew(&FlagsAttr_uart_event);
 	uart_transmit_ID = osThreadNew(uart_transmit_thread, NULL, &ThreadAttr_uart_transmit);
 	osKernelLock();
 	TMP1075_Init();
