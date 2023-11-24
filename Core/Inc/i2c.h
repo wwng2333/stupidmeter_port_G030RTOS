@@ -41,11 +41,16 @@ extern "C"
 
 void INA226_Init(void);
 void TMP1075_Init(void);
+float TMP1075_ReadTemp(void);
+
+void INA226_Update(void);
+void INA226_Read_Voltage(void);
+void INA226_Read_Current(void);
 
 uint16_t INA226_Read_2Byte(uint8_t addr);
 uint16_t TMP1075_Read_2Byte(uint8_t addr);
+void INA226_Write_2Byte(uint8_t addr, uint16_t dat);
 
-void I2C_Write_2Byte(uint8_t addr, uint16_t dat);
 uint8_t I2C_ReadByte(uint8_t addr);
 void I2C_WriteByte(uint8_t addr, uint8_t dat);
 

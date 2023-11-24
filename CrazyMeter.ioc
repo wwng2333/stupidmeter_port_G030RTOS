@@ -47,6 +47,7 @@ NVIC.NonMaskableInt_IRQn=true\:0\:0\:false\:false\:true\:false\:false\:false
 NVIC.PendSV_IRQn=true\:0\:0\:false\:false\:true\:false\:false\:false
 NVIC.SVC_IRQn=true\:0\:0\:false\:false\:true\:false\:false\:true
 NVIC.SysTick_IRQn=true\:3\:0\:false\:false\:true\:false\:true\:false
+NVIC.USART2_IRQn=true\:0\:0\:false\:false\:true\:true\:true\:true
 PA11\ [PA9].GPIOParameters=GPIO_PuPd,GPIO_ModeDefaultOutputPP
 PA11\ [PA9].GPIO_ModeDefaultOutputPP=GPIO_MODE_OUTPUT_OD
 PA11\ [PA9].GPIO_PuPd=GPIO_NOPULL

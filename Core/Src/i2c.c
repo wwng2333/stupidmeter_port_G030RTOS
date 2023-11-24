@@ -6,13 +6,12 @@
 #include "cmsis_os2.h"
 #include <stdbool.h>
 
+extern ina226_info_struct ina226_info;
+
 #define I2C_WRITE 0
 #define I2C_READ 1
-//#define INA226_ADDR 0x40
 #define INA226_ADDR (0x40 << 1)
 #define TMP1075_ADDR (0x48 << 1)
-#define READ_STRETCH_TIMEOUT	100
-#define WRITE_STRETCH_TIMEOUT	80
 
 void I2C_Delay(void)
 {
@@ -35,6 +34,23 @@ void I2C_Delay(void)
 #define Read_SDA_Pin LL_GPIO_IsInputPinSet(I2C_GPIO_PORT, Pin_SDA)
 #define Read_SCL_Pin LL_GPIO_IsInputPinSet(I2C_GPIO_PORT, Pin_SCL)
 
+float TMP1075_ReadTemp(void)
+{
+	float temp = 0.0f;
+	int16_t dat = 0;
+	dat = TMP1075_Read_2Byte(0x00);
+	if(dat&0x8000) 
+	{
+		dat = ~(dat - 1);
+	}
+	temp = (float)dat / 256;
+	#if __Crazy_DEBUG
+	SEGGER_RTT_SetTerminal(1);
+	SEGGER_RTT_printf(0, "read TMP1075 0x00=%.2f\r\n", temp);
+	#endif
+	return temp;
+}
+
 /**
   * @brief Read TMP1075 ID, Set Configuration 
 	* Register and Calibration Register
@@ -50,7 +66,6 @@ void TMP1075_Init(void)
 		SEGGER_RTT_SetTerminal(1);
 		SEGGER_RTT_printf(0, "read TMP1075 0x0F=0x%x\r\n", id);
 		#endif
-		osDelay(100);
 	} while(id != 0x7500);
 }
 
@@ -69,13 +84,54 @@ void INA226_Init(void)
 		SEGGER_RTT_SetTerminal(1);
 		SEGGER_RTT_printf(0, "read INA226 0xFE=0x%x\r\n", id);
 		#endif
-		osDelay(100);
 	} while(id != 0x5449);
-	I2C_Write_2Byte(0x00, 0x45FF); // Configuration Register
-	I2C_Write_2Byte(0x05, 0x1400); // Calibration Register, 5120, 0.1mA
-	//LSB=0.0002mA,R=0.005R Cal=0.00512/(0.0002*0.005)=5120=0x1400
+	INA226_Write_2Byte(0x00, 0x45FF); // Configuration Register
+	INA226_Write_2Byte(0x05, 0x2155); // Calibration Register, 5120, 0.1mA
+	//LSB=0.0002mA,R=0.003R Cal=0.00512/(0.0002*0.003)=8533=0x2155
 	#ifdef __Crazy_DEBUG
-	SEGGER_RTT_printf(0, "set INA226 0x05=0x%x\r\n", 0x1400);
+	SEGGER_RTT_printf(0, "set INA226 0x05=0x%x\r\n", 0x2155);
+	SEGGER_RTT_SetTerminal(0);
+	#endif
+}
+
+void INA226_Update(void)
+{
+	INA226_Read_Voltage();
+	osDelay(1);
+	INA226_Read_Current();
+	osDelay(1);
+	ina226_info.Power = ina226_info.Voltage * ina226_info.Current;
+}
+
+void INA226_Read_Voltage(void)
+{
+	uint16_t temp = 0;
+	temp = INA226_Read_2Byte(0x02);
+	ina226_info.Voltage = 1.25 * (float)INA226_Read_2Byte(0x02) / 1000;
+	#ifdef __Crazy_DEBUG
+	SEGGER_RTT_SetTerminal(1);
+	SEGGER_RTT_printf(0, "read INA226 0x02=%d\r\n", temp);
+	SEGGER_RTT_SetTerminal(0);
+	#endif
+}
+
+void INA226_Read_Current(void)
+{
+	uint16_t temp = 0;
+	temp = INA226_Read_2Byte(0x04);
+	if(temp&0x8000) 
+	{
+		temp = ~(temp - 1);
+		ina226_info.Direction = 1;
+	}
+	else
+	{
+		ina226_info.Direction = 0;
+	}
+	ina226_info.Current = (float)temp * 0.0002;
+	#ifdef __Crazy_DEBUG
+	SEGGER_RTT_SetTerminal(1);
+	SEGGER_RTT_printf(0, "read INA226 0x04=%d\r\n", temp);
 	SEGGER_RTT_SetTerminal(0);
 	#endif
 }
@@ -142,7 +198,7 @@ uint8_t I2C_ReadByte(uint8_t addr)
 	return dat;
 }
 
-void I2C_Write_2Byte(uint8_t addr, uint16_t dat)
+void INA226_Write_2Byte(uint8_t addr, uint16_t dat)
 {
 	I2C_Start();
 	I2C_SendData(INA226_ADDR);

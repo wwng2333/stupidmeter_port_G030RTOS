@@ -24,6 +24,8 @@
 #include "cmsis_os2.h"
 #include "RTE_Components.h"
 #include "i2c.h"
+#include "usart.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,7 +46,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-__IO osThreadId_t app_main_ID;
+osThreadId_t app_main_ID;
+osThreadId_t uart_transmit_ID;
+osEventFlagsId_t uart_event_flagID;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,20 +63,59 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+ina226_info_struct ina226_info = {.Voltage = 0.0f, .Current = 0.0f, .Power = 0.0f, .Direction = 0};
+
+uart_rcv_state_enum uart_state = RCV_HEAD;
+uint8_t uart_rcv_buf[UART_BUF_LEN] = {0};
+uint8_t uart_rcv_count = 0;
+uint8_t uart_rcv_len = 0;
+uint8_t uart_rcv_flag = 0;
+
+float tmp = 0.0f;
+
 static const osThreadAttr_t ThreadAttr_app_main =
 	{
 		.name = "app_main",
 		.priority = (osPriority_t)osPriorityNormal,
-		.stack_size = 512};
-	
+		.stack_size = 384};
+
+static const osThreadAttr_t ThreadAttr_uart_transmit =
+    {
+			.name = "uart_transmit",
+			.priority = (osPriority_t)osPriorityNormal,
+			.stack_size = 512};
+		
+__NO_RETURN void uart_transmit_thread(void *arg)
+{
+  for (;;)
+  {
+    osEventFlagsWait(uart_event_flagID, UART_RCV_DONE_FLAG, osFlagsWaitAny, osWaitForever);
+		//SEGGER_RTT_printf(0, "uart recv!\r\n");
+		//UART2_SendString("uart recv!\r\n");
+		//SEGGER_RTT_printf(0, "%s", uart_rcv_buf);
+		memset(uart_rcv_buf, 0, SIZE(uart_rcv_buf));
+		uart_state = RCV_HEAD;
+		uart_rcv_count = 0;
+		uart_rcv_len = 0;
+		osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
+	}
+}
+
 void app_main(void *arg)
 {
+	osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
+	uart_transmit_ID = osThreadNew(uart_transmit_thread, NULL, &ThreadAttr_uart_transmit);
 	osKernelLock();
 	TMP1075_Init();
 	INA226_Init();
 	osKernelUnlock();
 	for (;;)
 	{
+		osKernelLock();
+		INA226_Update();
+		tmp = TMP1075_ReadTemp();
+		osKernelUnlock();
+		osDelay(500);
 	}
 }
 
@@ -95,7 +138,7 @@ int main(void)
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
 
   /* SysTick_IRQn interrupt configuration */
-  NVIC_SetPriority(SysTick_IRQn, 3);
+  //NVIC_SetPriority(SysTick_IRQn, 3);
 
   /* USER CODE BEGIN Init */
 
@@ -364,6 +407,10 @@ static void MX_USART2_UART_Init(void)
   GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /* USART2 interrupt Init */
+  NVIC_SetPriority(USART2_IRQn, 1);
+  NVIC_EnableIRQ(USART2_IRQn);
+
   /* USER CODE BEGIN USART2_Init 1 */
 
   /* USER CODE END USART2_Init 1 */
@@ -380,7 +427,7 @@ static void MX_USART2_UART_Init(void)
   LL_USART_ConfigAsyncMode(USART2);
 
   /* USER CODE BEGIN WKUPType USART2 */
-
+	LL_USART_EnableIT_RXNE(USART2);
   /* USER CODE END WKUPType USART2 */
 
   LL_USART_Enable(USART2);
@@ -429,19 +476,18 @@ static void MX_GPIO_Init(void)
   /**/
   GPIO_InitStruct.Pin = LL_GPIO_PIN_11;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = LL_GPIO_PIN_12;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	//I2C_Stop();
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

@@ -51,6 +51,34 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+typedef enum cmd_type_enum
+{
+	CMD_NONE = 0,
+	PWR_ON_CMD = 0xBC,
+	PWR_OFF_CMD = 0xBD,
+	PWR_ON_ACK_CMD = 0xBE,
+	PWR_OFF_ACK_CMD = 0xBF,
+	BATT_INFO_CMD = 0xBB,
+	CMD_TYPE_MAX = 255
+} cmd_type_enum;
+
+typedef struct ina226_info_struct
+{
+	float Voltage;
+	float Current;
+	float Power;
+	uint8_t Direction; //if Direction=1, current is negative.
+} ina226_info_struct;
+
+typedef enum uart_rcv_state_enum
+{
+	RCV_IDLE = 0,
+	RCV_HEAD,
+	RCV_LEN,
+	RCV_CMD,
+	RCV_DATA,
+	RCV_STATE_MAX = 255
+} uart_rcv_state_enum;
 
 /* USER CODE END ET */
 
@@ -75,6 +103,12 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 #define __Crazy_DEBUG 1
+#define UART_BUF_LEN	48
+#define UART_RCV_DONE_FLAG (1U << 0)
+#define UART_TX_START_FLAG (1U << 1)
+#define SIZE(temp) sizeof(temp) / sizeof(uint8_t)
+#define HEAD 0x55
+#define TAIL 0xAA
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
