@@ -66,6 +66,7 @@ static void MX_USART2_UART_Init(void);
 ina226_info_struct ina226_info = {.Voltage = 0.0f, .Current = 0.0f, .Power = 0.0f, .Direction = 0};
 
 uart_rcv_state_enum uart_state = RCV_HEAD;
+extern cmd_type_enum uart_cmd_type;
 uint8_t uart_rcv_buf[UART_BUF_LEN] = {0};
 uint8_t uart_rcv_count = 0;
 uint8_t uart_rcv_len = 0;
@@ -95,8 +96,7 @@ __NO_RETURN void uart_transmit_thread(void *arg)
   for (;;)
   {
     osEventFlagsWait(uart_event_flagID, UART_RCV_DONE_FLAG, osFlagsWaitAny, osWaitForever);
-		SEGGER_RTT_printf(0, "uart recv!\r\n");
-		UART2_SendString("uart recv!\r\n");
+		SEGGER_RTT_printf(0, "uart recv:%x!\r\n", uart_cmd_type);
 		memset(uart_rcv_buf, 0, SIZE(uart_rcv_buf));
 		uart_state = RCV_HEAD;
 		uart_rcv_count = 0;
