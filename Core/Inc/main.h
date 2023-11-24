@@ -51,35 +51,44 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-typedef enum cmd_type_enum
-{
-	CMD_NONE = 0,
-	PWR_ON_CMD = 0xBC,
-	PWR_OFF_CMD = 0xBD,
-	PWR_ON_ACK_CMD = 0xBE,
-	PWR_OFF_ACK_CMD = 0xBF,
-	BATT_INFO_CMD = 0xBB,
-	CMD_TYPE_MAX = 255
-} cmd_type_enum;
+#pragma pack(1)
+	typedef enum cmd_type_enum
+	{
+		CMD_NONE = 0,
+		PWR_ON_CMD = 0xBC,
+		PWR_OFF_CMD = 0xBD,
+		PWR_ON_ACK_CMD = 0xBE,
+		PWR_OFF_ACK_CMD = 0xBF,
+		BATT_INFO_CMD = 0xBB,
+		CMD_TYPE_MAX = 255
+	} cmd_type_enum;
 
-typedef struct ina226_info_struct
-{
-	float Voltage;
-	float Current;
-	float Power;
-	uint8_t Direction; //if Direction=1, current is negative.
-} ina226_info_struct;
+	typedef struct ina226_info_struct
+	{
+		float Voltage;
+		float Current;
+		float Power;
+		uint8_t Direction; //if Direction=1, current is negative.
+	} ina226_info_struct;
 
-typedef enum uart_rcv_state_enum
-{
-	RCV_IDLE = 0,
-	RCV_HEAD,
-	RCV_LEN,
-	RCV_CMD,
-	RCV_DATA,
-	RCV_STATE_MAX = 255
-} uart_rcv_state_enum;
+	typedef enum uart_rcv_state_enum
+	{
+		RCV_IDLE = 0,
+		RCV_HEAD,
+		RCV_LEN,
+		RCV_CMD,
+		RCV_DATA,
+		RCV_STATE_MAX = 255
+	} uart_rcv_state_enum;
 
+	typedef struct uart_cmd_struct
+	{
+		uint8_t head;
+		uint8_t data_len;
+		uint8_t cmd;
+		uint8_t tail;
+	} uart_cmd_struct;
+#pragma pack()
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

@@ -424,6 +424,11 @@
               <FileType>1</FileType>
               <FilePath>..\Core\Src\usart.c</FilePath>
             </File>
+            <File>
+              <FileName>Queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\Queue.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

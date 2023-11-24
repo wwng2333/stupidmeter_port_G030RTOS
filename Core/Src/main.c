@@ -26,6 +26,8 @@
 #include "i2c.h"
 #include "usart.h"
 #include "string.h"
+#include "stdio.h"
+#include "Queue.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,21 +66,28 @@ static void MX_USART2_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 ina226_info_struct ina226_info = {.Voltage = 0.0f, .Current = 0.0f, .Power = 0.0f, .Direction = 0};
-
+Queue Voltage_queue = {.front = 0, .rear = 0};
+Queue Current_queue = {.front = 0, .rear = 0};
+Queue Power_queue = {.front = 0, .rear = 0};
+Queue Temperature_queue = {.front = 0, .rear = 0};
 uart_rcv_state_enum uart_state = RCV_HEAD;
 extern cmd_type_enum uart_cmd_type;
 uint8_t uart_rcv_buf[UART_BUF_LEN] = {0};
+uart_cmd_struct uart_cmd = {0};
 uint8_t uart_rcv_count = 0;
 uint8_t uart_rcv_len = 0;
 uint8_t uart_rcv_flag = 0;
-
-float tmp = 0.0f;
+float mAh = 0.0f;
+float mWh = 0.0f;
+float time_past = 0.0f;
+uint32_t i2c_last_tick;
+char str[16];
 
 static const osThreadAttr_t ThreadAttr_app_main =
 	{
 		.name = "app_main",
 		.priority = (osPriority_t)osPriorityNormal,
-		.stack_size = 384};
+		.stack_size = 512};
 
 static const osThreadAttr_t ThreadAttr_uart_transmit =
     {
@@ -89,19 +98,41 @@ static const osThreadAttr_t ThreadAttr_uart_transmit =
 static const osEventFlagsAttr_t FlagsAttr_uart_event =
     {
         .name = "uart_rcv_evt"};
-			
+				
 __NO_RETURN void uart_transmit_thread(void *arg)
 {
 	osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
   for (;;)
   {
-    osEventFlagsWait(uart_event_flagID, UART_RCV_DONE_FLAG, osFlagsWaitAny, osWaitForever);
-		SEGGER_RTT_printf(0, "uart recv:%x!\r\n", uart_cmd_type);
-		memset(uart_rcv_buf, 0, SIZE(uart_rcv_buf));
-		uart_state = RCV_HEAD;
-		uart_rcv_count = 0;
-		uart_rcv_len = 0;
-		osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
+		osEventFlagsWait(uart_event_flagID, UART_RCV_DONE_FLAG, osFlagsWaitAny, osWaitForever);
+    memcpy(&uart_cmd, uart_rcv_buf, uart_rcv_count);
+    if (uart_cmd.head != HEAD || uart_cmd.tail != TAIL)
+    {
+      memset(uart_rcv_buf, 0, SIZE(uart_rcv_buf));
+      uart_rcv_count = 0;
+      uart_rcv_len = 0;
+      continue;
+    }
+    else
+    {
+			SEGGER_RTT_printf(0, "uart recv:0x%x!\r\n", uart_cmd_type);
+      switch (uart_cmd.cmd)
+      {
+      case PWR_ON_ACK_CMD:
+        uart_rcv_flag = 1;
+        break;
+      case PWR_OFF_ACK_CMD:
+        uart_rcv_flag = 1;
+        break;
+      default:
+        break;
+      }
+      osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
+      memset(uart_rcv_buf, 0, SIZE(uart_rcv_buf));
+      uart_state = RCV_HEAD;
+      uart_rcv_count = 0;
+      uart_rcv_len = 0;
+    }
 	}
 }
 
@@ -113,13 +144,23 @@ void app_main(void *arg)
 	TMP1075_Init();
 	INA226_Init();
 	osKernelUnlock();
+	i2c_last_tick = osKernelGetTickCount();
 	for (;;)
 	{
 		osKernelLock();
 		INA226_Update();
-		tmp = TMP1075_ReadTemp();
+		float tmp = TMP1075_ReadTemp();
 		osKernelUnlock();
-		osDelay(500);
+		time_past = (float)(osKernelGetTickCount() - i2c_last_tick) / 3600;
+		i2c_last_tick = osKernelGetTickCount();
+		osDelay(50);
+		enqueue(&Voltage_queue, ina226_info.Voltage);
+		enqueue(&Current_queue, ina226_info.Current);
+		enqueue(&Power_queue, ina226_info.Power);
+		enqueue(&Temperature_queue, tmp);
+		mAh += time_past * ina226_info.Current;
+		mWh += time_past * ina226_info.Power;
+		osDelay(950);
 	}
 }
 
