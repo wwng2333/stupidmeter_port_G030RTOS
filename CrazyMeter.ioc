@@ -1,9 +1,15 @@
 #MicroXplorer Configuration settings - do not modify
-ADC1.Channel-0\#ChannelRegularConversion=ADC_CHANNEL_TEMPSENSOR
-ADC1.IPParameters=Rank-0\#ChannelRegularConversion,Channel-0\#ChannelRegularConversion,SamplingTime-0\#ChannelRegularConversion,NbrOfConversionFlag,master,SelectedChannel
+ADC1.Channel-0\#ChannelRegularConversion=ADC_CHANNEL_VREFINT
+ADC1.Channel-1\#ChannelRegularConversion=ADC_CHANNEL_TEMPSENSOR
+ADC1.IPParameters=Rank-0\#ChannelRegularConversion,Channel-0\#ChannelRegularConversion,SamplingTime-0\#ChannelRegularConversion,NbrOfConversionFlag,master,SelectedChannel,Rank-1\#ChannelRegularConversion,Channel-1\#ChannelRegularConversion,SamplingTime-1\#ChannelRegularConversion,NbrOfConversion,SamplingTimeCommon1,SamplingTimeCommon2
+ADC1.NbrOfConversion=2
 ADC1.NbrOfConversionFlag=1
 ADC1.Rank-0\#ChannelRegularConversion=1
+ADC1.Rank-1\#ChannelRegularConversion=2
 ADC1.SamplingTime-0\#ChannelRegularConversion=ADC_SAMPLINGTIME_COMMON_1
+ADC1.SamplingTime-1\#ChannelRegularConversion=ADC_SAMPLINGTIME_COMMON_1
+ADC1.SamplingTimeCommon1=ADC_SAMPLETIME_160CYCLES_5
+ADC1.SamplingTimeCommon2=ADC_SAMPLETIME_160CYCLES_5
 ADC1.SelectedChannel=ADC_CHANNEL_TEMPSENSOR|ADC_CHANNEL_VREFINT
 ADC1.master=1
 CAD.formats=

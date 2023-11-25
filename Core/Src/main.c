@@ -74,11 +74,11 @@ uart_rcv_state_enum uart_state = RCV_HEAD;
 extern cmd_type_enum uart_cmd_type;
 uint8_t uart_rcv_buf[UART_BUF_LEN] = {0};
 uart_cmd_struct uart_cmd = {0};
+rtc_update_struct rtc_update = {0};
 uint8_t uart_rcv_count = 0;
 uint8_t uart_rcv_len = 0;
 uint8_t uart_rcv_flag = 0;
-float mAh = 0.0f;
-float mWh = 0.0f;
+float mAh, mWh, MCU_VCC, MCU_Temp = 0.0f;
 float time_past = 0.0f;
 uint32_t i2c_last_tick;
 char str[16];
@@ -98,6 +98,32 @@ static const osThreadAttr_t ThreadAttr_uart_transmit =
 static const osEventFlagsAttr_t FlagsAttr_uart_event =
     {
         .name = "uart_rcv_evt"};
+
+uint32_t ADC_Read_Voltage(ADC_TypeDef *ADCx)
+{
+	uint32_t result = 0;
+	LL_ADC_Enable(ADCx);
+	while (LL_ADC_IsActiveFlag_ADRDY(ADCx) == 0);
+	if (LL_ADC_IsActiveFlag_EOC(ADCx)) LL_ADC_ClearFlag_EOC(ADCx);
+	//LL_ADC_REG_SetSequencerChannels(ADCx, Channel);
+	LL_ADC_REG_StartConversion(ADCx);
+	while (LL_ADC_IsActiveFlag_EOC(ADCx) == 0);
+	LL_ADC_ClearFlag_EOC(ADCx);
+	result = LL_ADC_REG_ReadConversionData12(ADCx);
+	SEGGER_RTT_printf(0, "ADC read:%d\r\n", result);
+	return result;
+}
+				
+void ADC_Update(void)
+{
+	uint32_t ADC_VCC;
+	int32_t ADC_TEMP;
+	ADC_VCC = __LL_ADC_CALC_VREFANALOG_VOLTAGE(ADC_Read_Voltage(ADC1), LL_ADC_RESOLUTION_12B);
+	MCU_VCC = (float)ADC_VCC / 1000;
+	ADC_TEMP = __LL_ADC_CALC_TEMPERATURE(ADC_VCC, ADC_Read_Voltage(ADC1), LL_ADC_RESOLUTION_12B);
+	SEGGER_RTT_printf(0, "VCC=%fV\r\n", MCU_VCC);
+	SEGGER_RTT_printf(0, "Temp=%dC\r\n", ADC_TEMP);
+}
 				
 __NO_RETURN void uart_transmit_thread(void *arg)
 {
@@ -117,15 +143,15 @@ __NO_RETURN void uart_transmit_thread(void *arg)
     {
 			SEGGER_RTT_printf(0, "uart recv:0x%x!\r\n", uart_cmd_type);
       switch (uart_cmd.cmd)
-      {
-      case PWR_ON_ACK_CMD:
-        uart_rcv_flag = 1;
-        break;
-      case PWR_OFF_ACK_CMD:
-        uart_rcv_flag = 1;
-        break;
-      default:
-        break;
+      {	
+				case GET_INFO_CMD:
+					uart_rcv_flag = 1;
+					break;
+				case UPDATE_RTC_CMD:
+					uart_rcv_flag = 1;
+					break;
+				default:
+					break;
       }
       osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
       memset(uart_rcv_buf, 0, SIZE(uart_rcv_buf));
@@ -154,6 +180,7 @@ void app_main(void *arg)
 		time_past = (float)(osKernelGetTickCount() - i2c_last_tick) / 3600;
 		i2c_last_tick = osKernelGetTickCount();
 		osDelay(50);
+		ADC_Update();
 		enqueue(&Voltage_queue, ina226_info.Voltage);
 		enqueue(&Current_queue, ina226_info.Current);
 		enqueue(&Power_queue, ina226_info.Power);
@@ -313,7 +340,7 @@ static void MX_ADC1_Init(void)
    #endif /* USE_TIMEOUT */
      }
    /* Clear flag ADC channel configuration ready */
-   LL_ADC_ClearFlag_CCRDY(ADC1);
+	LL_ADC_ClearFlag_CCRDY(ADC1);
   ADC_REG_InitStruct.TriggerSource = LL_ADC_REG_TRIG_SOFTWARE;
   ADC_REG_InitStruct.SequencerLength = LL_ADC_REG_SEQ_SCAN_DISABLE;
   ADC_REG_InitStruct.SequencerDiscont = LL_ADC_REG_SEQ_DISCONT_DISABLE;
@@ -324,8 +351,8 @@ static void MX_ADC1_Init(void)
   LL_ADC_SetOverSamplingScope(ADC1, LL_ADC_OVS_DISABLE);
   LL_ADC_SetTriggerFrequencyMode(ADC1, LL_ADC_CLOCK_FREQ_MODE_HIGH);
   LL_ADC_SetCommonPathInternalCh(__LL_ADC_COMMON_INSTANCE(ADC1), LL_ADC_AWD_CH_VREFINT_REG|LL_ADC_AWD_CH_TEMPSENSOR_REG);
-  LL_ADC_SetSamplingTimeCommonChannels(ADC1, LL_ADC_SAMPLINGTIME_COMMON_1, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-  LL_ADC_SetSamplingTimeCommonChannels(ADC1, LL_ADC_SAMPLINGTIME_COMMON_2, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+  LL_ADC_SetSamplingTimeCommonChannels(ADC1, LL_ADC_SAMPLINGTIME_COMMON_1, LL_ADC_SAMPLINGTIME_160CYCLES_5);
+  LL_ADC_SetSamplingTimeCommonChannels(ADC1, LL_ADC_SAMPLINGTIME_COMMON_2, LL_ADC_SAMPLINGTIME_160CYCLES_5);
   LL_ADC_DisableIT_EOC(ADC1);
   LL_ADC_DisableIT_EOS(ADC1);
 
@@ -346,7 +373,10 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_TEMPSENSOR);
+  LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
+  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_COMMON_1);
+  LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_2, LL_ADC_CHANNEL_TEMPSENSOR);
+  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_TEMPSENSOR, LL_ADC_SAMPLINGTIME_COMMON_1);
 
    /* Poll for ADC channel configuration ready */
    #if (USE_TIMEOUT == 1)
@@ -367,9 +397,10 @@ static void MX_ADC1_Init(void)
      }
    /* Clear flag ADC channel configuration ready */
    LL_ADC_ClearFlag_CCRDY(ADC1);
-  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_TEMPSENSOR, LL_ADC_SAMPLINGTIME_COMMON_1);
   /* USER CODE BEGIN ADC1_Init 2 */
-
+	LL_mDelay(1);
+	LL_ADC_StartCalibration(ADC1);
+	while (LL_ADC_IsCalibrationOnGoing(ADC1));
   /* USER CODE END ADC1_Init 2 */
 
 }
