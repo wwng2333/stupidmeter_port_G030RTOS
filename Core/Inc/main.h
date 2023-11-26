@@ -47,6 +47,7 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "SEGGER_RTT.h"
+#include "Queue.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -130,6 +131,11 @@ extern "C" {
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
+uint16_t crc16(uint8_t *data, uint8_t len, uint16_t *table);
+void PackQueue(Queue* queue, sensor_data_struct* sensor_data);
+void PackAllData(void);
+
+	
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */

@@ -48,6 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+osTimerId_t timer0;
 osMutexId_t uart_mutexId;
 osThreadId_t app_main_ID;
 osThreadId_t uart_transmit_ID;
@@ -98,6 +99,10 @@ const uint16_t table[256] = {0x0, 0xa001, 0xe003, 0x4002, 0x6007, 0xc006, 0x8004
                              0x8094, 0x2095, 0x6097, 0xc096, 0x80, 0xa081, 0xe083, 0x4082, 0x6087, 0xc086, 0x8084, 0x2085, 0xc08e, 0x608f, 0x208d, 0x808c, 0xa089, 0x88, 0x408a, 0xe08b, 0x60a7, 0xc0a6,
                              0x80a4, 0x20a5, 0xa0, 0xa0a1, 0xe0a3, 0x40a2, 0xa0a9, 0xa8, 0x40aa, 0xe0ab, 0xc0ae, 0x60af, 0x20ad, 0x80ac, 0x40ba, 0xe0bb, 0xa0b9, 0xb8, 0x20bd, 0x80bc, 0xc0be, 0x60bf,
                              0x80b4, 0x20b5, 0x60b7, 0xc0b6, 0xe0b3, 0x40b2, 0xb0, 0xa0b1};
+
+static const osTimerAttr_t timerAttr_soc_cb = {
+    .name = "timer0",
+};
 
 static osMutexAttr_t uart_mutex_attr =
     {
@@ -166,6 +171,7 @@ __NO_RETURN void uart_transmit_thread(void *arg)
       {	
 				case GET_DATA_CMD:
 					uart_rcv_flag = 1;
+					PackAllData();
 					UART2_Transmit8((uint8_t *)&uart_data, uart_data.data_len);
 					break;
 				case UPDATE_RTC_CMD:
@@ -213,6 +219,26 @@ void PackAllData(void)
 	uart_data.data_len = sizeof(uart_data) / sizeof(uint8_t);
 }
 
+void i2c_timer_cb(void *param)
+{
+	osKernelLock();
+	INA226_Update();
+	float tmp = TMP1075_ReadTemp();
+	osKernelUnlock();
+	time_past = (float)(osKernelGetTickCount() - i2c_last_tick) / 3600;
+	i2c_last_tick = osKernelGetTickCount();
+	osDelay(50);
+	ADC_Update();
+	enqueue(&Voltage_queue, ina226_info.Voltage);
+	enqueue(&Current_queue, ina226_info.Current);
+	enqueue(&Power_queue, ina226_info.Power);
+	enqueue(&Temperature_queue, tmp);
+	mAh += time_past * ina226_info.Current;
+	mWh += time_past * ina226_info.Power;
+	osDelay(1);
+	//PackAllData();
+}
+
 void app_main(void *arg)
 {
 	uart_mutexId = osMutexNew(&uart_mutex_attr);
@@ -222,27 +248,9 @@ void app_main(void *arg)
 	TMP1075_Init();
 	INA226_Init();
 	osKernelUnlock();
+	timer0 = osTimerNew(&i2c_timer_cb, osTimerPeriodic, (void *)0, &timerAttr_soc_cb);
+	osTimerStart(timer0, 1000);
 	i2c_last_tick = osKernelGetTickCount();
-	for (;;)
-	{
-		osKernelLock();
-		INA226_Update();
-		float tmp = TMP1075_ReadTemp();
-		osKernelUnlock();
-		time_past = (float)(osKernelGetTickCount() - i2c_last_tick) / 3600;
-		i2c_last_tick = osKernelGetTickCount();
-		osDelay(50);
-		ADC_Update();
-		enqueue(&Voltage_queue, ina226_info.Voltage);
-		enqueue(&Current_queue, ina226_info.Current);
-		enqueue(&Power_queue, ina226_info.Power);
-		enqueue(&Temperature_queue, tmp);
-		mAh += time_past * ina226_info.Current;
-		mWh += time_past * ina226_info.Power;
-		osDelay(1);
-		PackAllData();
-		osDelay(950);
-	}
 }
 
 /* USER CODE END 0 */
