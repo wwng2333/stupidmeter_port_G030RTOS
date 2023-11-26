@@ -48,6 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+osMutexId_t uart_mutexId;
 osThreadId_t app_main_ID;
 osThreadId_t uart_transmit_ID;
 osEventFlagsId_t uart_event_flagID;
@@ -83,6 +84,10 @@ float mAh, mWh, MCU_VCC, MCU_Temp = 0.0f;
 float time_past = 0.0f;
 uint32_t i2c_last_tick;
 char str[16];
+
+static osMutexAttr_t uart_mutex_attr =
+    {
+        .name = "uart_mutex"};
 
 static const osThreadAttr_t ThreadAttr_app_main =
 	{
@@ -186,6 +191,7 @@ void PackAllData(void)
 
 void app_main(void *arg)
 {
+	uart_mutexId = osMutexNew(&uart_mutex_attr);
 	uart_event_flagID = osEventFlagsNew(&FlagsAttr_uart_event);
 	uart_transmit_ID = osThreadNew(uart_transmit_thread, NULL, &ThreadAttr_uart_transmit);
 	osKernelLock();

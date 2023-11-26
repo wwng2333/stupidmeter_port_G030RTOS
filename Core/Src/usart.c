@@ -23,6 +23,7 @@
 #include "cmsis_os2.h"
 
 /* USER CODE BEGIN 0 */
+extern osMutexId_t uart_mutexId;
 extern uint8_t uart_rcv_count;
 extern uint8_t uart_rcv_buf[48];
 extern uart_rcv_state_enum uart_state;
@@ -33,15 +34,20 @@ extern uint8_t uart_rcv_flag;
 /* USER CODE END 0 */
 
 /* USER CODE BEGIN 1 */
-void UART2_Transmit8(uint8_t* str, uint8_t size)
+void UART2_Transmit8_mutex(uint8_t *p, uint8_t counter)
 {
-    /* 遍历字符串中的每个字符 */
-    for (int i = 0; i < size; i++)
-    {
-        while (!LL_USART_IsActiveFlag_TXE(USART2));
-        LL_USART_TransmitData8(USART2, (uint8_t)str[i]);
-    }
-    while (!LL_USART_IsActiveFlag_TC(USART2));
+  for (uint8_t i = 0; i < counter; i++)
+  {
+    LL_USART_TransmitData8(USART2, *(p++));
+    while (!LL_USART_IsActiveFlag_TXE(USART2));
+  }
+}
+
+void UART2_Transmit8(uint8_t *p, uint8_t counter)
+{
+  osMutexAcquire(uart_mutexId, osWaitForever);
+  UART2_Transmit8_mutex(p, counter);
+  osMutexRelease(uart_mutexId);
 }
 
 void UART2_SendString(const char* str)
