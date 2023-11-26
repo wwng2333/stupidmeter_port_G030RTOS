@@ -113,6 +113,7 @@ extern "C" {
 		float mWh;
 		float mAh;
 		float MCU_VCC;
+		uint16_t crc;
 		uint8_t tail;
 	} uart_data_struct;
 #pragma pack()
