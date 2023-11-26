@@ -118,7 +118,7 @@ static const osThreadAttr_t ThreadAttr_uart_transmit =
     {
 			.name = "uart_transmit",
 			.priority = (osPriority_t)osPriorityNormal,
-			.stack_size = 512};
+			.stack_size = 384};
 		
 static const osEventFlagsAttr_t FlagsAttr_uart_event =
     {
@@ -288,7 +288,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
-  MX_RTC_Init();
+  //MX_RTC_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 	osKernelInitialize();
