@@ -228,7 +228,7 @@
         <Ww>
           <count>14</count>
           <WinNumber>1</WinNumber>
-          <ItemText>MCU_Temp</ItemText>
+          <ItemText>uart_data,0x10</ItemText>
         </Ww>
       </WatchWindow1>
       <ScvdPack>

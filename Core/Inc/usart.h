@@ -35,7 +35,7 @@ extern "C" {
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
-
+void UART2_Transmit8(uint8_t* str, uint8_t size);
 void UART2_SendString(const char* str);
 
 /* USER CODE BEGIN Prototypes */

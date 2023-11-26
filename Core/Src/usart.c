@@ -33,6 +33,17 @@ extern uint8_t uart_rcv_flag;
 /* USER CODE END 0 */
 
 /* USER CODE BEGIN 1 */
+void UART2_Transmit8(uint8_t* str, uint8_t size)
+{
+    /* 遍历字符串中的每个字符 */
+    for (int i = 0; i < size; i++)
+    {
+        while (!LL_USART_IsActiveFlag_TXE(USART2));
+        LL_USART_TransmitData8(USART2, (uint8_t)str[i]);
+    }
+    while (!LL_USART_IsActiveFlag_TC(USART2));
+}
+
 void UART2_SendString(const char* str)
 {
     /* 遍历字符串中的每个字符 */
@@ -93,7 +104,7 @@ void USART2_IRQHandler(void)
     }
     else if (uart_state == RCV_CMD)
     {
-			if (GET_INFO_CMD == temp || UPDATE_RTC_CMD == temp)
+			if (GET_DATA_CMD == temp || UPDATE_RTC_CMD == temp)
 			{
 				uart_rcv_buf[uart_rcv_count] = temp;
 				uart_rcv_len--;

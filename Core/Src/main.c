@@ -73,8 +73,9 @@ Queue Temperature_queue = {.front = 0, .rear = 0};
 uart_rcv_state_enum uart_state = RCV_HEAD;
 extern cmd_type_enum uart_cmd_type;
 uint8_t uart_rcv_buf[UART_BUF_LEN] = {0};
-uart_cmd_struct uart_cmd = {0};
-rtc_update_struct rtc_update = {0};
+uart_cmd_struct uart_recv_cmd = {0};
+uart_data_struct uart_data = {.head = HEAD, .tail = TAIL};
+//rtc_update_struct rtc_update = {0};
 uint8_t uart_rcv_count = 0;
 uint8_t uart_rcv_len = 0;
 uint8_t uart_rcv_flag = 0;
@@ -131,8 +132,8 @@ __NO_RETURN void uart_transmit_thread(void *arg)
   for (;;)
   {
 		osEventFlagsWait(uart_event_flagID, UART_RCV_DONE_FLAG, osFlagsWaitAny, osWaitForever);
-    memcpy(&uart_cmd, uart_rcv_buf, uart_rcv_count);
-    if (uart_cmd.head != HEAD || uart_cmd.tail != TAIL)
+    memcpy(&uart_recv_cmd, uart_rcv_buf, uart_rcv_count);
+    if (uart_recv_cmd.head != HEAD || uart_recv_cmd.tail != TAIL)
     {
       memset(uart_rcv_buf, 0, SIZE(uart_rcv_buf));
       uart_rcv_count = 0;
@@ -142,10 +143,11 @@ __NO_RETURN void uart_transmit_thread(void *arg)
     else
     {
 			SEGGER_RTT_printf(0, "uart recv:0x%x!\r\n", uart_cmd_type);
-      switch (uart_cmd.cmd)
+      switch (uart_recv_cmd.cmd)
       {	
-				case GET_INFO_CMD:
+				case GET_DATA_CMD:
 					uart_rcv_flag = 1;
+					UART2_Transmit8((uint8_t *)&uart_data, uart_data.data_len);
 					break;
 				case UPDATE_RTC_CMD:
 					uart_rcv_flag = 1;
@@ -161,6 +163,26 @@ __NO_RETURN void uart_transmit_thread(void *arg)
     }
 	}
 }
+
+void PackQueue(Queue* queue, sensor_data_struct* sensor_data)
+{
+	sensor_data->max = queue->max;
+	sensor_data->min = queue->min;
+	sensor_data->avg = queue->avg;
+}
+
+void PackAllData(void)
+{
+	PackQueue(&Voltage_queue, &uart_data.voltage);
+	PackQueue(&Current_queue, &uart_data.current);
+	PackQueue(&Power_queue, &uart_data.power);
+	PackQueue(&Temperature_queue, &uart_data.temperature);
+	uart_data.mAh = mAh;
+	uart_data.mWh = mWh;
+	uart_data.MCU_VCC = MCU_VCC;
+	uart_data.data_len = sizeof(uart_data) / sizeof(uint8_t);
+}
+
 
 void app_main(void *arg)
 {
@@ -187,6 +209,8 @@ void app_main(void *arg)
 		enqueue(&Temperature_queue, tmp);
 		mAh += time_past * ina226_info.Current;
 		mWh += time_past * ina226_info.Power;
+		osDelay(1);
+		PackAllData();
 		osDelay(950);
 	}
 }

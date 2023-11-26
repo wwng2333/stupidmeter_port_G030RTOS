@@ -55,7 +55,7 @@ extern "C" {
 	typedef enum cmd_type_enum
 	{
 		CMD_NONE = 0,
-		GET_INFO_CMD = 0xBB,
+		GET_DATA_CMD = 0xBB,
 		UPDATE_RTC_CMD = 0xBC,
 		CMD_TYPE_MAX = 255
 	} cmd_type_enum;
@@ -94,6 +94,27 @@ extern "C" {
 		uint32_t time;
 		uint8_t tail;
 	} rtc_update_struct;
+	
+	typedef struct sensor_data_struct
+	{
+		float max;
+		float avg;
+		float min;
+	} sensor_data_struct;
+	
+	typedef struct uart_data_struct
+	{
+		uint8_t head;
+		uint8_t data_len;
+		sensor_data_struct voltage;
+		sensor_data_struct current;
+		sensor_data_struct power;
+		sensor_data_struct temperature;
+		float mWh;
+		float mAh;
+		float MCU_VCC;
+		uint8_t tail;
+	} uart_data_struct;
 #pragma pack()
 /* USER CODE END ET */
 
