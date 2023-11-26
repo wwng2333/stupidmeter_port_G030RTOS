@@ -128,7 +128,7 @@ void INA226_Read_Current(void)
 	{
 		ina226_info.Direction = 0;
 	}
-	ina226_info.Current = (float)temp * 0.0002;
+	ina226_info.Current = (float)temp * 0.2;
 	#ifdef __Crazy_DEBUG
 	SEGGER_RTT_SetTerminal(1);
 	SEGGER_RTT_printf(0, "read INA226 0x04=%d\r\n", temp);

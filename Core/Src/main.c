@@ -76,7 +76,7 @@ uart_rcv_state_enum uart_state = RCV_HEAD;
 extern cmd_type_enum uart_cmd_type;
 uint8_t uart_rcv_buf[UART_BUF_LEN] = {0};
 uart_cmd_struct uart_recv_cmd = {0};
-uart_data_struct uart_data = {.head = HEAD, .tail = TAIL};
+uart_data_struct uart_data = {.head = HEAD, .tail = TAIL, .cmd_type = GET_DATA_ACK};
 //rtc_update_struct rtc_update = {0};
 uint8_t uart_rcv_count = 0;
 uint8_t uart_rcv_len = 0;

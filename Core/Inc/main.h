@@ -58,6 +58,7 @@ extern "C" {
 		CMD_NONE = 0,
 		GET_DATA_CMD = 0xBB,
 		UPDATE_RTC_CMD = 0xBC,
+		GET_DATA_ACK = 0xCB,
 		CMD_TYPE_MAX = 255
 	} cmd_type_enum;
 
@@ -107,6 +108,7 @@ extern "C" {
 	{
 		uint8_t head;
 		uint8_t data_len;
+		uint8_t cmd_type;
 		sensor_data_struct voltage;
 		sensor_data_struct current;
 		sensor_data_struct power;
