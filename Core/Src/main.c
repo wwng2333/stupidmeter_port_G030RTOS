@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2023 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2023 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -77,7 +77,7 @@ extern cmd_type_enum uart_cmd_type;
 uint8_t uart_rcv_buf[UART_BUF_LEN] = {0};
 uart_cmd_struct uart_recv_cmd = {0};
 uart_data_struct uart_data = {.head = HEAD, .tail = TAIL, .cmd_type = GET_DATA_ACK};
-//rtc_update_struct rtc_update = {0};
+// rtc_update_struct rtc_update = {0};
 uint8_t uart_rcv_count = 0;
 uint8_t uart_rcv_len = 0;
 uint8_t uart_rcv_flag = 0;
@@ -109,53 +109,56 @@ static osMutexAttr_t uart_mutex_attr =
         .name = "uart_mutex"};
 
 static const osThreadAttr_t ThreadAttr_app_main =
-	{
-		.name = "app_main",
-		.priority = (osPriority_t)osPriorityNormal,
-		.stack_size = 512};
+    {
+        .name = "app_main",
+        .priority = (osPriority_t)osPriorityNormal,
+        .stack_size = 512};
 
 static const osThreadAttr_t ThreadAttr_uart_transmit =
     {
-			.name = "uart_transmit",
-			.priority = (osPriority_t)osPriorityNormal,
-			.stack_size = 384};
-		
+        .name = "uart_transmit",
+        .priority = (osPriority_t)osPriorityNormal,
+        .stack_size = 384};
+
 static const osEventFlagsAttr_t FlagsAttr_uart_event =
     {
         .name = "uart_rcv_evt"};
 
 uint32_t ADC_Read_Voltage(ADC_TypeDef *ADCx)
 {
-	uint32_t result = 0;
-	LL_ADC_Enable(ADCx);
-	while (LL_ADC_IsActiveFlag_ADRDY(ADCx) == 0);
-	if (LL_ADC_IsActiveFlag_EOC(ADCx)) LL_ADC_ClearFlag_EOC(ADCx);
-	//LL_ADC_REG_SetSequencerChannels(ADCx, Channel);
-	LL_ADC_REG_StartConversion(ADCx);
-	while (LL_ADC_IsActiveFlag_EOC(ADCx) == 0);
-	LL_ADC_ClearFlag_EOC(ADCx);
-	result = LL_ADC_REG_ReadConversionData12(ADCx);
-	SEGGER_RTT_printf(0, "ADC read:%d\r\n", result);
-	return result;
+  uint32_t result = 0;
+  LL_ADC_Enable(ADCx);
+  while (LL_ADC_IsActiveFlag_ADRDY(ADCx) == 0)
+    ;
+  if (LL_ADC_IsActiveFlag_EOC(ADCx))
+    LL_ADC_ClearFlag_EOC(ADCx);
+  // LL_ADC_REG_SetSequencerChannels(ADCx, Channel);
+  LL_ADC_REG_StartConversion(ADCx);
+  while (LL_ADC_IsActiveFlag_EOC(ADCx) == 0)
+    ;
+  LL_ADC_ClearFlag_EOC(ADCx);
+  result = LL_ADC_REG_ReadConversionData12(ADCx);
+  SEGGER_RTT_printf(0, "ADC read:%d\r\n", result);
+  return result;
 }
-				
+
 void ADC_Update(void)
 {
-	uint32_t ADC_VCC;
-	int32_t ADC_TEMP;
-	ADC_VCC = __LL_ADC_CALC_VREFANALOG_VOLTAGE(ADC_Read_Voltage(ADC1), LL_ADC_RESOLUTION_12B);
-	MCU_VCC = (float)ADC_VCC / 1000;
-	ADC_TEMP = __LL_ADC_CALC_TEMPERATURE(ADC_VCC, ADC_Read_Voltage(ADC1), LL_ADC_RESOLUTION_12B);
-	SEGGER_RTT_printf(0, "VCC=%fV\r\n", MCU_VCC);
-	SEGGER_RTT_printf(0, "Temp=%dC\r\n", ADC_TEMP);
+  uint32_t ADC_VCC;
+  int32_t ADC_TEMP;
+  ADC_VCC = __LL_ADC_CALC_VREFANALOG_VOLTAGE(ADC_Read_Voltage(ADC1), LL_ADC_RESOLUTION_12B);
+  MCU_VCC = (float)ADC_VCC / 1000;
+  ADC_TEMP = __LL_ADC_CALC_TEMPERATURE(ADC_VCC, ADC_Read_Voltage(ADC1), LL_ADC_RESOLUTION_12B);
+  SEGGER_RTT_printf(0, "VCC=%fV\r\n", MCU_VCC);
+  SEGGER_RTT_printf(0, "Temp=%dC\r\n", ADC_TEMP);
 }
-				
+
 __NO_RETURN void uart_transmit_thread(void *arg)
 {
-	osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
+  osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
   for (;;)
   {
-		osEventFlagsWait(uart_event_flagID, UART_RCV_DONE_FLAG, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(uart_event_flagID, UART_RCV_DONE_FLAG, osFlagsWaitAny, osWaitForever);
     memcpy(&uart_recv_cmd, uart_rcv_buf, uart_rcv_count);
     if (uart_recv_cmd.head != HEAD || uart_recv_cmd.tail != TAIL)
     {
@@ -166,19 +169,19 @@ __NO_RETURN void uart_transmit_thread(void *arg)
     }
     else
     {
-			SEGGER_RTT_printf(0, "uart recv:0x%x!\r\n", uart_cmd_type);
+      SEGGER_RTT_printf(0, "uart recv:0x%x!\r\n", uart_cmd_type);
       switch (uart_recv_cmd.cmd)
-      {	
-				case GET_DATA_CMD:
-					uart_rcv_flag = 1;
-					PackAllData();
-					UART2_Transmit8((uint8_t *)&uart_data, uart_data.data_len);
-					break;
-				case UPDATE_RTC_CMD:
-					uart_rcv_flag = 1;
-					break;
-				default:
-					break;
+      {
+      case GET_DATA_CMD:
+        uart_rcv_flag = 1;
+        PackAllData();
+        UART2_Transmit8((uint8_t *)&uart_data, uart_data.data_len);
+        break;
+      case UPDATE_RTC_CMD:
+        uart_rcv_flag = 1;
+        break;
+      default:
+        break;
       }
       osEventFlagsClear(uart_event_flagID, UART_RCV_DONE_FLAG);
       memset(uart_rcv_buf, 0, SIZE(uart_rcv_buf));
@@ -186,7 +189,7 @@ __NO_RETURN void uart_transmit_thread(void *arg)
       uart_rcv_count = 0;
       uart_rcv_len = 0;
     }
-	}
+  }
 }
 
 uint16_t crc16(uint8_t *data, uint8_t len, uint16_t *table)
@@ -199,66 +202,69 @@ uint16_t crc16(uint8_t *data, uint8_t len, uint16_t *table)
   return crc;
 }
 
-void PackQueue(Queue* queue, sensor_data_struct* sensor_data)
+void PackQueue(Queue *queue, sensor_data_struct *sensor_data)
 {
-	sensor_data->max = queue->max;
-	sensor_data->min = queue->min;
-	sensor_data->avg = queue->avg;
+  sensor_data->max = queue->max;
+  sensor_data->min = queue->min;
+  sensor_data->avg = queue->avg;
 }
 
 void PackAllData(void)
 {
-	PackQueue(&Voltage_queue, &uart_data.voltage);
-	PackQueue(&Current_queue, &uart_data.current);
-	PackQueue(&Power_queue, &uart_data.power);
-	PackQueue(&Temperature_queue, &uart_data.temperature);
-	uart_data.mAh = mAh;
-	uart_data.mWh = mWh;
-	uart_data.MCU_VCC = MCU_VCC;
-	uart_data.crc = crc16((uint8_t*)&uart_data.data_len, uart_data.data_len - 4, (uint16_t*)table);
-	uart_data.data_len = sizeof(uart_data) / sizeof(uint8_t);
+  PackQueue(&Voltage_queue, &uart_data.voltage);
+  PackQueue(&Current_queue, &uart_data.current);
+  PackQueue(&Power_queue, &uart_data.power);
+  PackQueue(&Temperature_queue, &uart_data.temperature);
+  uart_data.mAh = mAh;
+  uart_data.mWh = mWh;
+  uart_data.MCU_VCC = MCU_VCC;
+  uart_data.crc = crc16((uint8_t *)&uart_data.data_len, uart_data.data_len - 4, (uint16_t *)table);
+  uart_data.data_len = SIZE(uart_data);
 }
 
 void i2c_timer_cb(void *param)
 {
-	osKernelLock();
-	INA226_Update();
-	float tmp = TMP1075_ReadTemp();
-	osKernelUnlock();
-	time_past = (float)(osKernelGetTickCount() - i2c_last_tick) / 3600;
-	i2c_last_tick = osKernelGetTickCount();
-	osDelay(50);
-	ADC_Update();
-	enqueue(&Voltage_queue, ina226_info.Voltage);
-	enqueue(&Current_queue, ina226_info.Current);
-	enqueue(&Power_queue, ina226_info.Power);
-	enqueue(&Temperature_queue, tmp);
-	mAh += time_past * ina226_info.Current;
-	mWh += time_past * ina226_info.Power;
-	osDelay(1);
-	//PackAllData();
+  osKernelLock();
+  INA226_Update();
+  float tmp = TMP1075_ReadTemp();
+  osKernelUnlock();
+  time_past = (float)(osKernelGetTickCount() - i2c_last_tick) / 3600;
+  i2c_last_tick = osKernelGetTickCount();
+  osDelay(50);
+  ADC_Update();
+  enqueue(&Voltage_queue, ina226_info.Voltage);
+  enqueue(&Current_queue, ina226_info.Current);
+  enqueue(&Power_queue, ina226_info.Power);
+  enqueue(&Temperature_queue, tmp);
+  if (ina226_info.Current > 0.002)
+  {
+    mAh += time_past * ina226_info.Current;
+    mWh += time_past * ina226_info.Power;
+  }
+  osDelay(1);
+  // PackAllData();
 }
 
 void app_main(void *arg)
 {
-	uart_mutexId = osMutexNew(&uart_mutex_attr);
-	uart_event_flagID = osEventFlagsNew(&FlagsAttr_uart_event);
-	uart_transmit_ID = osThreadNew(uart_transmit_thread, NULL, &ThreadAttr_uart_transmit);
-	osKernelLock();
-	TMP1075_Init();
-	INA226_Init();
-	osKernelUnlock();
-	timer0 = osTimerNew(&i2c_timer_cb, osTimerPeriodic, (void *)0, &timerAttr_soc_cb);
-	osTimerStart(timer0, 1000);
-	i2c_last_tick = osKernelGetTickCount();
+  uart_mutexId = osMutexNew(&uart_mutex_attr);
+  uart_event_flagID = osEventFlagsNew(&FlagsAttr_uart_event);
+  uart_transmit_ID = osThreadNew(uart_transmit_thread, NULL, &ThreadAttr_uart_transmit);
+  osKernelLock();
+  TMP1075_Init();
+  INA226_Init();
+  osKernelUnlock();
+  timer0 = osTimerNew(&i2c_timer_cb, osTimerPeriodic, (void *)0, &timerAttr_soc_cb);
+  osTimerStart(timer0, 1000);
+  i2c_last_tick = osKernelGetTickCount();
 }
 
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -272,7 +278,7 @@ int main(void)
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
 
   /* SysTick_IRQn interrupt configuration */
-  //NVIC_SetPriority(SysTick_IRQn, 3);
+  // NVIC_SetPriority(SysTick_IRQn, 3);
 
   /* USER CODE BEGIN Init */
 
@@ -288,15 +294,15 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
-  //MX_RTC_Init();
+  // MX_RTC_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-	osKernelInitialize();
-	app_main_ID = osThreadNew(app_main, NULL, &ThreadAttr_app_main);
-	while (osKernelGetState() != osKernelReady)
-	{
-	};
-	osKernelStart();
+  osKernelInitialize();
+  app_main_ID = osThreadNew(app_main, NULL, &ThreadAttr_app_main);
+  while (osKernelGetState() != osKernelReady)
+  {
+  };
+  osKernelStart();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -311,20 +317,20 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   /* HSI configuration and activation */
   LL_RCC_HSI_Enable();
-  while(LL_RCC_HSI_IsReady() != 1)
+  while (LL_RCC_HSI_IsReady() != 1)
   {
   }
 
   /* LSI configuration and activation */
   LL_RCC_LSI_Enable();
-  while(LL_RCC_LSI_IsReady() != 1)
+  while (LL_RCC_LSI_IsReady() != 1)
   {
   }
 
@@ -334,7 +340,7 @@ void SystemClock_Config(void)
 
   /* Sysclk activation on the HSI */
   LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_HSI);
-  while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSI)
+  while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSI)
   {
   }
 
@@ -348,10 +354,10 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief ADC1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief ADC1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_ADC1_Init(void)
 {
 
@@ -370,12 +376,12 @@ static void MX_ADC1_Init(void)
   /* USER CODE END ADC1_Init 1 */
 
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
+   */
 
-   #define ADC_CHANNEL_CONF_RDY_TIMEOUT_MS ( 1U)
-   #if (USE_TIMEOUT == 1)
-   uint32_t Timeout ; /* Variable used for Timeout management */
-   #endif /* USE_TIMEOUT */
+#define ADC_CHANNEL_CONF_RDY_TIMEOUT_MS (1U)
+#if (USE_TIMEOUT == 1)
+  uint32_t Timeout; /* Variable used for Timeout management */
+#endif              /* USE_TIMEOUT */
 
   ADC_InitStruct.Clock = LL_ADC_CLOCK_SYNC_PCLK_DIV2;
   ADC_InitStruct.Resolution = LL_ADC_RESOLUTION_12B;
@@ -384,25 +390,25 @@ static void MX_ADC1_Init(void)
   LL_ADC_Init(ADC1, &ADC_InitStruct);
   LL_ADC_REG_SetSequencerConfigurable(ADC1, LL_ADC_REG_SEQ_CONFIGURABLE);
 
-   /* Poll for ADC channel configuration ready */
-   #if (USE_TIMEOUT == 1)
-   Timeout = ADC_CHANNEL_CONF_RDY_TIMEOUT_MS;
-   #endif /* USE_TIMEOUT */
-   while (LL_ADC_IsActiveFlag_CCRDY(ADC1) == 0)
-     {
-   #if (USE_TIMEOUT == 1)
-   /* Check Systick counter flag to decrement the time-out value */
-   if (LL_SYSTICK_IsActiveCounterFlag())
-     {
-   if(Timeout-- == 0)
-         {
-   Error_Handler();
-         }
-     }
-   #endif /* USE_TIMEOUT */
-     }
-   /* Clear flag ADC channel configuration ready */
-	LL_ADC_ClearFlag_CCRDY(ADC1);
+/* Poll for ADC channel configuration ready */
+#if (USE_TIMEOUT == 1)
+  Timeout = ADC_CHANNEL_CONF_RDY_TIMEOUT_MS;
+#endif /* USE_TIMEOUT */
+  while (LL_ADC_IsActiveFlag_CCRDY(ADC1) == 0)
+  {
+#if (USE_TIMEOUT == 1)
+    /* Check Systick counter flag to decrement the time-out value */
+    if (LL_SYSTICK_IsActiveCounterFlag())
+    {
+      if (Timeout-- == 0)
+      {
+        Error_Handler();
+      }
+    }
+#endif /* USE_TIMEOUT */
+  }
+  /* Clear flag ADC channel configuration ready */
+  LL_ADC_ClearFlag_CCRDY(ADC1);
   ADC_REG_InitStruct.TriggerSource = LL_ADC_REG_TRIG_SOFTWARE;
   ADC_REG_InitStruct.SequencerLength = LL_ADC_REG_SEQ_SCAN_DISABLE;
   ADC_REG_InitStruct.SequencerDiscont = LL_ADC_REG_SEQ_DISCONT_DISABLE;
@@ -412,66 +418,66 @@ static void MX_ADC1_Init(void)
   LL_ADC_REG_Init(ADC1, &ADC_REG_InitStruct);
   LL_ADC_SetOverSamplingScope(ADC1, LL_ADC_OVS_DISABLE);
   LL_ADC_SetTriggerFrequencyMode(ADC1, LL_ADC_CLOCK_FREQ_MODE_HIGH);
-  LL_ADC_SetCommonPathInternalCh(__LL_ADC_COMMON_INSTANCE(ADC1), LL_ADC_AWD_CH_VREFINT_REG|LL_ADC_AWD_CH_TEMPSENSOR_REG);
+  LL_ADC_SetCommonPathInternalCh(__LL_ADC_COMMON_INSTANCE(ADC1), LL_ADC_AWD_CH_VREFINT_REG | LL_ADC_AWD_CH_TEMPSENSOR_REG);
   LL_ADC_SetSamplingTimeCommonChannels(ADC1, LL_ADC_SAMPLINGTIME_COMMON_1, LL_ADC_SAMPLINGTIME_160CYCLES_5);
   LL_ADC_SetSamplingTimeCommonChannels(ADC1, LL_ADC_SAMPLINGTIME_COMMON_2, LL_ADC_SAMPLINGTIME_160CYCLES_5);
   LL_ADC_DisableIT_EOC(ADC1);
   LL_ADC_DisableIT_EOS(ADC1);
 
-   /* Enable ADC internal voltage regulator */
-   LL_ADC_EnableInternalRegulator(ADC1);
-   /* Delay for ADC internal voltage regulator stabilization. */
-   /* Compute number of CPU cycles to wait for, from delay in us. */
-   /* Note: Variable divided by 2 to compensate partially */
-   /* CPU processing cycles (depends on compilation optimization). */
-   /* Note: If system core clock frequency is below 200kHz, wait time */
-   /* is only a few CPU processing cycles. */
-   uint32_t wait_loop_index;
-   wait_loop_index = ((LL_ADC_DELAY_INTERNAL_REGUL_STAB_US * (SystemCoreClock / (100000 * 2))) / 10);
-   while(wait_loop_index != 0)
-     {
-   wait_loop_index--;
-     }
+  /* Enable ADC internal voltage regulator */
+  LL_ADC_EnableInternalRegulator(ADC1);
+  /* Delay for ADC internal voltage regulator stabilization. */
+  /* Compute number of CPU cycles to wait for, from delay in us. */
+  /* Note: Variable divided by 2 to compensate partially */
+  /* CPU processing cycles (depends on compilation optimization). */
+  /* Note: If system core clock frequency is below 200kHz, wait time */
+  /* is only a few CPU processing cycles. */
+  uint32_t wait_loop_index;
+  wait_loop_index = ((LL_ADC_DELAY_INTERNAL_REGUL_STAB_US * (SystemCoreClock / (100000 * 2))) / 10);
+  while (wait_loop_index != 0)
+  {
+    wait_loop_index--;
+  }
 
   /** Configure Regular Channel
-  */
+   */
   LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_VREFINT);
   LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SAMPLINGTIME_COMMON_1);
   LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_2, LL_ADC_CHANNEL_TEMPSENSOR);
   LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_TEMPSENSOR, LL_ADC_SAMPLINGTIME_COMMON_1);
 
-   /* Poll for ADC channel configuration ready */
-   #if (USE_TIMEOUT == 1)
-   Timeout = ADC_CHANNEL_CONF_RDY_TIMEOUT_MS;
-   #endif /* USE_TIMEOUT */
-   while (LL_ADC_IsActiveFlag_CCRDY(ADC1) == 0)
-     {
-   #if (USE_TIMEOUT == 1)
-   /* Check Systick counter flag to decrement the time-out value */
-   if (LL_SYSTICK_IsActiveCounterFlag())
-     {
-   if(Timeout-- == 0)
-         {
-   Error_Handler();
-         }
-     }
-   #endif /* USE_TIMEOUT */
-     }
-   /* Clear flag ADC channel configuration ready */
-   LL_ADC_ClearFlag_CCRDY(ADC1);
+/* Poll for ADC channel configuration ready */
+#if (USE_TIMEOUT == 1)
+  Timeout = ADC_CHANNEL_CONF_RDY_TIMEOUT_MS;
+#endif /* USE_TIMEOUT */
+  while (LL_ADC_IsActiveFlag_CCRDY(ADC1) == 0)
+  {
+#if (USE_TIMEOUT == 1)
+    /* Check Systick counter flag to decrement the time-out value */
+    if (LL_SYSTICK_IsActiveCounterFlag())
+    {
+      if (Timeout-- == 0)
+      {
+        Error_Handler();
+      }
+    }
+#endif /* USE_TIMEOUT */
+  }
+  /* Clear flag ADC channel configuration ready */
+  LL_ADC_ClearFlag_CCRDY(ADC1);
   /* USER CODE BEGIN ADC1_Init 2 */
-	LL_mDelay(1);
-	LL_ADC_StartCalibration(ADC1);
-	while (LL_ADC_IsCalibrationOnGoing(ADC1));
+  LL_mDelay(1);
+  LL_ADC_StartCalibration(ADC1);
+  while (LL_ADC_IsCalibrationOnGoing(ADC1))
+    ;
   /* USER CODE END ADC1_Init 2 */
-
 }
 
 /**
-  * @brief RTC Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief RTC Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_RTC_Init(void)
 {
 
@@ -481,7 +487,7 @@ static void MX_RTC_Init(void)
 
   LL_RTC_InitTypeDef RTC_InitStruct = {0};
 
-  if(LL_RCC_GetRTCClockSource() != LL_RCC_RTC_CLKSOURCE_LSI)
+  if (LL_RCC_GetRTCClockSource() != LL_RCC_RTC_CLKSOURCE_LSI)
   {
     LL_RCC_ForceBackupDomainReset();
     LL_RCC_ReleaseBackupDomainReset();
@@ -502,14 +508,13 @@ static void MX_RTC_Init(void)
   /* USER CODE BEGIN RTC_Init 2 */
 
   /* USER CODE END RTC_Init 2 */
-
 }
 
 /**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief USART2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_USART2_UART_Init(void)
 {
 
@@ -565,31 +570,30 @@ static void MX_USART2_UART_Init(void)
   LL_USART_ConfigAsyncMode(USART2);
 
   /* USER CODE BEGIN WKUPType USART2 */
-	LL_USART_EnableIT_RXNE(USART2);
+  LL_USART_EnableIT_RXNE(USART2);
   /* USER CODE END WKUPType USART2 */
 
   LL_USART_Enable(USART2);
 
   /* Polling USART2 initialisation */
-  while((!(LL_USART_IsActiveFlag_TEACK(USART2))) || (!(LL_USART_IsActiveFlag_REACK(USART2))))
+  while ((!(LL_USART_IsActiveFlag_TEACK(USART2))) || (!(LL_USART_IsActiveFlag_REACK(USART2))))
   {
   }
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_GPIO_Init(void)
 {
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOA);
@@ -627,8 +631,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
@@ -636,9 +640,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -650,14 +654,14 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
