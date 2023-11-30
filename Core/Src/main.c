@@ -218,6 +218,7 @@ void PackAllData(void)
   uart_data.mAh = mAh;
   uart_data.mWh = mWh;
   uart_data.MCU_VCC = MCU_VCC;
+  uart_data.osTickCount = osKernelGetTickCount();
   uart_data.crc = crc16((uint8_t *)&uart_data.data_len, uart_data.data_len - 4, (uint16_t *)table);
   uart_data.data_len = SIZE(uart_data);
 }

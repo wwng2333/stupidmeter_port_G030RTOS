@@ -113,6 +113,7 @@ extern "C" {
 		sensor_data_struct current;
 		sensor_data_struct power;
 		sensor_data_struct temperature;
+		uint32_t osTickCount;
 		float mWh;
 		float mAh;
 		float MCU_VCC;
