@@ -238,8 +238,8 @@ void i2c_timer_cb(void *param)
   enqueue(&Temperature_queue, tmp);
   if (ina226_info.Current > 0.002)
   {
-    mAh += time_past * ina226_info.Current;
-    mWh += time_past * ina226_info.Power;
+    mAh += time_past * ina226_info.Current / 1000;
+    mWh += time_past * ina226_info.Power / 1000;
   }
   osDelay(1);
   // PackAllData();
